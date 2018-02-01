@@ -4,17 +4,15 @@
 if (process.version.slice(1).split(".")[0] < 8) throw new Error("Node 8.0.0 or higher is required. Update Node on your system.");
 
 // Load up the discord.js library
-const Discord = require("discord.js");
+const { Client, Collection } = require("discord.js");
 // We also load the rest of the things we need in this file:
 const { promisify } = require("util");
 const readdir = promisify(require("fs").readdir);
-const Enmap = require("enmap");
-const EnmapLevel = require("enmap-level");
 const klaw = require("klaw");
 const path = require("path");
 
 
-class GuideBot extends Discord.Client {
+class GuideBot extends Client {
   constructor(options) {
     super(options);
 
@@ -22,19 +20,16 @@ class GuideBot extends Discord.Client {
     this.config = require("./config.js");
     // client.config.token contains the bot's token
     // client.config.prefix contains the message prefix
-
+    
     // Aliases and commands are put in collections where they can be read from,
     // catalogued, listed, etc.
-    this.commands = new Enmap();
-    this.aliases = new Enmap();
+    this.commands = new Collection();
+    this.aliases = new Collection();
+    
 
-    // Now we integrate the use of Evie's awesome Enhanced Map module, which
-    // essentially saves a collection to disk. This is great for per-server configs,
-    // and makes things extremely easy for this purpose.
-    this.settings = new Enmap({ provider: new EnmapLevel({ name: "settings" }) });
-
-    //requiring the Logger class for easy console logging
-    this.logger = require("./util/Logger");
+    this.settings = require("./modules/database.js");
+    // requiring the Logger class for easy console logging
+    this.logger = require("./util/Logger.js");
   }
 
   /*
@@ -112,31 +107,17 @@ class GuideBot extends Discord.Client {
 
   // getSettings merges the client defaults with the guild settings. guild settings in
   // enmap should only have *unique* overrides that are different from defaults.
-  getSettings(id) {
-    const defaults = client.settings.get("default");
-    let guild = client.settings.get(id);
-    if (typeof guild != "object") guild = {};
-    const returnObject = {};
-    Object.keys(defaults).forEach((key) => {
-      returnObject[key] = guild[key] ? guild[key] : defaults[key];
-    });
-    return returnObject;
+  async getSettings(id) {
+    const [config] = await client.settings.guildsettings.findOrCreate({ where: { id:id } });
+    return config.dataValues;
   }
 
   // writeSettings overrides, or adds, any configuration item that is different
   // than the defaults. This ensures less storage wasted and to detect overrides.
-  writeSettings(id, newSettings) {
-    const defaults = client.settings.get("default");
-    let settings = client.settings.get(id);
-    if (typeof settings != "object") settings = {};
-    for (const key in newSettings) {
-      if (defaults[key] !== newSettings[key]) {
-        settings[key] = newSettings[key];
-      } else {
-        delete settings[key];
-      }
-    }
-    client.settings.set(id, settings);
+  async writeSettings(id, data) {
+    const config = await client.settings.guildsettings.findById(id);
+    const result = await config.update(data);
+    return result.dataValues;
   }
 }
 

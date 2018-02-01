@@ -19,16 +19,11 @@ module.exports = class {
       this.client.appInfo = await this.client.fetchApplication();
     }, 60000);
 
-    // Check whether the "Default" guild settings are loaded in the enmap.
-    // If they're not, write them in. This should only happen on first load.
-    if (!this.client.settings.has("default")) {
-      if (!this.client.config.defaultSettings) throw new Error("defaultSettings not preset in config.js or settings database. Bot cannot load.");
-      this.client.settings.set("default", this.client.config.defaultSettings);
-    }
-
+    // 
+    await this.client.settings.database.sync();
     // Set the game as the default help command + guild count.
     // NOTE: This is also set in the guildCreate and guildDelete events!
-    this.client.user.setActivity(`${this.client.settings.get("default").prefix}help | ${this.client.guilds.size} Servers`);
+    this.client.user.setActivity(`${this.client.config.defaultSettings.prefix}help | ${this.client.guilds.size} Servers`);
   
     // Log that we're ready to serve, so we know the bot accepts commands.
     this.client.logger.log(`${this.client.user.tag}, ready to serve ${this.client.users.size} users in ${this.client.guilds.size} servers.`, "ready");

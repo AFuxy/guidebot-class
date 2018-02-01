@@ -29,18 +29,16 @@ class Set extends Command {
 
     // First we need to retrieve current guild settings
     const settings = message.settings;
-    const defaults = this.client.settings.get("default");
-  
+    const defaults = this.client.config.defaultSettings;
     // Secondly, if a user does `-set edit <key> <new value>`, let's change it
     if (action === "edit") {
       if (!key) return message.reply("Please specify a key to edit");
       if (!settings[key]) return message.reply("This key does not exist in the settings");
       if (value.length < 1) return message.reply("Please specify a new value");
     
-      settings[key] = value.join(" ");
-
-      this.client.settings.set(message.guild.id, settings);
-      message.reply(`${key} successfully edited to ${value.join(" ")}`);
+      const data = { [key]: value.join(" ") };
+      await this.client.writeSettings(message.guild.id, data);
+      await message.reply(`${key} successfully edited to ${value.join(" ")}`);
     } else
   
     // Thirdly, if a user does `-set del <key>`, let's ask the user if they're sure...
@@ -53,11 +51,9 @@ class Set extends Command {
 
       // If they respond with y or yes, continue.
       if (["y", "yes"].includes(response)) {
-
-        // We reset the `key` here.
-        delete settings[key];
-        this.client.settings.set(message.guild.id, settings);
-        message.reply(`${key} was successfully reset to default.`);
+        const data = { [key]: defaults[key] };
+        await this.client.writeSettings(message.guild.id, data);
+        await message.reply(`${key} was successfully reset to default.`);
       } else
 
       // If they respond with n or no, we inform them that the action has been cancelled.
@@ -76,10 +72,10 @@ class Set extends Command {
       // Otherwise, the default action is to return the whole configuration in JSON format (to be prettified!);
       const array = [];
       Object.entries(settings).forEach(([key, value]) => {
+        if (key === "updatedAt" || key === "createdAt" ||key === "id") return;
         array.push(`${key}${" ".repeat(20 - key.length)}::  ${value}`); 
       });
-      await message.channel.send(`= Current Guild Settings =
-${array.join("\n")}`, {code: "asciidoc"});
+      await message.channel.send(`= Current Guild Settings =\n${array.join("\n")}`, {code: "asciidoc"});
     }
   }
 }

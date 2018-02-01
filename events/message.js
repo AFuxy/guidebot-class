@@ -14,12 +14,11 @@ module.exports = class {
     if (message.author.bot) return;
 
     // Cancel any attempt to execute commands if the bot cannot respond to the user.
-    if (message.guild.me.permissionsIn(message.channel).missing("SEND_MESSAGES")) return;
+    // if (message.guild.me.permissionsIn(message.channel).missing("SEND_MESSAGES")) return;
     
     // Grab the settings for this server from the PersistentCollection
     // If there is no guild, get default conf (DMs)
-    const settings = message.guild ? this.client.getSettings(message.guild.id) : this.client.settings.get("default");
-
+    const settings = message.guild ? await this.client.getSettings(message.guild.id) : this.client.config.defaultSettings;
     // For ease of use in commands and functions, we'll attach the settings
     // to the message object, so `message.settings` is accessible.
     message.settings = settings;
